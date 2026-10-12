@@ -1,0 +1,52 @@
+services:
+  postgres-giteai:
+    image: postgres:17-alpine
+    container_name: postgres-giteai
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: giteai
+      POSTGRES_USER: giteai
+      POSTGRES_PASSWORD: ${GITEAI_POSTGRES_PASSWORD:?GITEAI_POSTGRES_PASSWORD is required}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ~/data/giteai/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U giteai -d giteai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  giteai:
+    build:
+      context: .
+      dockerfile: Dockerfile.giteai
+    image: giteai:local
+    container_name: giteai
+    restart: unless-stopped
+    depends_on:
+      postgres-giteai:
+        condition: service_healthy
+    environment:
+      USER: git
+      APP_NAME: GiteAI
+      RUN_MODE: prod
+      DOMAIN: localhost
+      SSH_DOMAIN: localhost
+      ROOT_URL: http://localhost:3200/
+      HTTP_PORT: 3000
+      SSH_PORT: 2222
+      SSH_LISTEN_PORT: 22
+      DB_TYPE: postgres
+      DB_HOST: postgres-giteai:5432
+      DB_NAME: giteai
+      DB_USER: giteai
+      DB_PASSWD: ${GITEAI_POSTGRES_PASSWORD:?GITEAI_POSTGRES_PASSWORD is required}
+      SECRET_KEY: ${GITEAI_SECRET_KEY:?GITEAI_SECRET_KEY is required}
+      INSTALL_LOCK: "true"
+      GITEA__service__DISABLE_REGISTRATION: "true"
+    ports:
+      - "127.0.0.1:3200:3000"
+      - "127.0.0.1:2222:22"
+    volumes:
+      - ~/data/giteai/giteai:/data

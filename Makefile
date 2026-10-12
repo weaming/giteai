@@ -483,6 +483,18 @@ test-e2e: playwright frontend backend
 .PHONY: build
 build: frontend backend ## build everything
 
+GITEAI_TARGET_GOOS ?= linux
+GITEAI_TARGET_GOARCH ?= arm64
+GITEAI_TARGET_TAGS ?= bindata timetzdata
+
+.PHONY: build-giteai
+build-giteai: ## cross-build GiteAI for the Compose runtime image
+	GOOS=$(GITEAI_TARGET_GOOS) GOARCH=$(GITEAI_TARGET_GOARCH) CGO_ENABLED=0 TAGS='$(GITEAI_TARGET_TAGS)' $(MAKE) build
+
+.PHONY: up-giteai
+up-giteai: build-giteai ## cross-build and start the GiteAI Compose stack
+	docker compose up --build -d
+
 .PHONY: frontend
 frontend: $(FRONTEND_DEST) ## build frontend files
 

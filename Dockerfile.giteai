@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:1
+
+FROM docker.io/library/alpine:3.24
+
+EXPOSE 22 3000
+
+RUN apk --no-cache add \
+    bash \
+    ca-certificates \
+    curl \
+    gettext \
+    git \
+    linux-pam \
+    openssh \
+    s6 \
+    sqlite \
+    su-exec \
+    gnupg
+
+RUN addgroup \
+    -S -g 1000 \
+    git && \
+  adduser \
+    -S -H -D \
+    -h /data/git \
+    -s /bin/bash \
+    -u 1000 \
+    -G git \
+    git && \
+  echo "git:*" | chpasswd -e
+
+COPY docker/root /
+COPY gitea /app/gitea/gitea
+
+RUN chmod 755 \
+    /usr/bin/entrypoint \
+    /usr/local/bin/* \
+    /etc/s6/gitea/* \
+    /etc/s6/openssh/* \
+    /etc/s6/.s6-svscan/* \
+    /app/gitea/gitea
+
+ENV USER=git
+ENV GITEA_CUSTOM=/data/gitea
+
+VOLUME ["/data"]
+
+ENTRYPOINT ["/usr/bin/entrypoint"]
+CMD ["/usr/bin/s6-svscan", "/etc/s6"]
